@@ -1036,7 +1036,7 @@ const TeamInfoView: React.FC<TeamInfoProps> = ({
       const updateData: any = {
         team_id: teamId,
         team_alias: values.team_alias,
-        models: normalizeTeamModelSelection(values.models),
+        ...(form.getFieldState("models").isDirty ? { models: normalizeTeamModelSelection(values.models) } : {}),
         tpm_limit: sanitizeNumeric(values.tpm_limit),
         rpm_limit: sanitizeNumeric(values.rpm_limit),
         tpd_limit: sanitizeNumeric(values.tpd_limit),

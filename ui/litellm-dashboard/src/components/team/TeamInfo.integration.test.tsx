@@ -721,3 +721,81 @@ describe("TeamInfoView - member budget reset prompt", () => {
     expect(bulkUpdatePOST).not.toHaveBeenCalled();
   });
 });
+
+describe("TeamInfoView - model updates", () => {
+  const props = {
+    teamId: "123",
+    onUpdate: vi.fn(),
+    onClose: vi.fn(),
+    accessToken: "test-token",
+    is_team_admin: true,
+    is_proxy_admin: true,
+    userModels: ["gpt-4", "gpt-4o"],
+    editTeam: false,
+    premiumUser: false,
+  };
+
+  const openEditor = async (user: ReturnType<typeof userEvent.setup>) => {
+    vi.mocked(networking.teamInfoCall).mockResolvedValue(createMockTeamData({ models: ["gpt-4"] }) as TeamData);
+    vi.mocked(networking.teamUpdateCall).mockResolvedValue({ data: {}, team_id: "123" });
+    mockUseAllProxyModels.mockReturnValue({
+      data: {
+        data: [
+          { id: "gpt-4", object: "model", created: 0, owned_by: "openai" },
+          { id: "gpt-4o", object: "model", created: 0, owned_by: "openai" },
+        ],
+      },
+      isLoading: false,
+    } as ReturnType<typeof useAllProxyModels>);
+
+    renderWithProviders(<TeamInfoView {...props} />);
+    await user.click(await screen.findByRole("tab", { name: "Settings" }));
+    await user.click(await screen.findByRole("button", { name: /edit settings/i }));
+    await screen.findByLabelText("Max Budget (USD)");
+  };
+
+  beforeEach(() => {
+    seedDefaultMocks();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("omits models when saving only a max budget change", async () => {
+    const user = userEvent.setup({ delay: null });
+    await openEditor(user);
+
+    fireEvent.change(screen.getByLabelText("Max Budget (USD)"), { target: { value: "25" } });
+    await user.click(screen.getByRole("button", { name: /save changes/i }));
+
+    await waitFor(() => expect(networking.teamUpdateCall).toHaveBeenCalled());
+    expect(vi.mocked(networking.teamUpdateCall).mock.calls[0][1]).not.toHaveProperty("models");
+  });
+
+  it("sends normalized models when the selection changes", async () => {
+    const user = userEvent.setup({ delay: null });
+    await openEditor(user);
+
+    await user.click(screen.getByRole("combobox", { name: "Select Models" }));
+    await user.click(await screen.findByText("gpt-4o"));
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: /save changes/i }));
+
+    await waitFor(() => expect(networking.teamUpdateCall).toHaveBeenCalled());
+    expect(vi.mocked(networking.teamUpdateCall).mock.calls[0][1].models).toEqual(["gpt-4", "gpt-4o"]);
+  });
+
+  it("sends the normalized empty selection when models are cleared", async () => {
+    const user = userEvent.setup({ delay: null });
+    await openEditor(user);
+
+    await user.click(screen.getByRole("combobox", { name: "Select Models" }));
+    await user.click(await screen.findByRole("option", { name: "gpt-4" }));
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: /save changes/i }));
+
+    await waitFor(() => expect(networking.teamUpdateCall).toHaveBeenCalled());
+    expect(vi.mocked(networking.teamUpdateCall).mock.calls[0][1].models).toEqual(["no-default-models"]);
+  });
+});
