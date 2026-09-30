@@ -10,8 +10,8 @@ import sys
 import zipfile
 
 MAX_PATH = 260
-# Worst-case Windows site-packages prefix: long profile name + roaming AppData venv.
-WORST_CASE_PREFIX = 100
+# Microsoft Store Python 3.13 site-packages prefix length for issue #43851.
+WORST_CASE_PREFIX = 139
 
 
 def overlong_install_paths(wheel, prefix_len=WORST_CASE_PREFIX, max_path=MAX_PATH):

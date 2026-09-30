@@ -1,4 +1,5 @@
 import zipfile
+from typing import Final
 
 from check_windows_wheel_install import (
     MAX_PATH,
@@ -19,6 +20,19 @@ def _wheel(tmp_path, *entry_names):
 def test_flags_entry_one_char_over_budget(tmp_path):
     busts = "a" * (MAX_PATH - WORST_CASE_PREFIX + 1)
     assert overlong_install_paths(_wheel(tmp_path, busts)) == [busts]
+
+
+def test_microsoft_store_prefix_flags_long_policy_templates(tmp_path):
+    policy_template_prefix: Final = (
+        "litellm/proxy/guardrails/guardrail_hooks/litellm_content_filter/policy_templates/"
+    )
+    filenames: Final = (
+        "sg_pdpa_profiling_automated_decisions.yaml",
+        "eu_ai_act_art5_emotion_recognition_fr.yaml",
+        "eu_ai_act_art5_biometric_profiling_fr.yaml",
+    )
+    paths: Final = tuple(policy_template_prefix + filename for filename in filenames)
+    assert overlong_install_paths(_wheel(tmp_path, *paths)) == list(paths)
 
 
 def test_allows_entry_exactly_at_budget(tmp_path):

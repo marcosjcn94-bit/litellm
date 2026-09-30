@@ -500,7 +500,7 @@ PROFILING_CASES = [
 @pytest.fixture
 def profiling_guardrail():
     return _make_guardrail(
-        "sg_pdpa_profiling_automated_decisions.yaml",
+        "sg_pdpa_profile_automated_decisions.yaml",
         "sg_pdpa_profiling_automated_decisions",
     )
 

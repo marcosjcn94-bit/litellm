@@ -14,6 +14,7 @@ from collections.abc import AsyncGenerator, Coroutine, Mapping, Sequence
 from dataclasses import dataclass, replace
 from datetime import datetime
 from re import Pattern
+from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Final, Literal, Optional, TypedDict, cast
 
 import yaml
@@ -67,6 +68,13 @@ from .patterns import PATTERN_EXTRA_CONFIG, get_compiled_pattern
 MAX_KEYWORD_VALUE_GAP_WORDS: Final = 1
 GAP_WORD_TOKENIZER: Final = re.compile(r"\b\w+\b")
 SENTENCE_TERMINATORS: Final = re.compile(r"[.!?]+")
+_LEGACY_POLICY_TEMPLATE_FILENAMES: Final[Mapping[str, str]] = MappingProxyType(
+    {
+        "sg_pdpa_profiling_automated_decisions.yaml": "sg_pdpa_profile_automated_decisions.yaml",
+        "eu_ai_act_art5_emotion_recognition_fr.yaml": "eu_ai_act_art5_emotion_recog_fr.yaml",
+        "eu_ai_act_art5_biometric_profiling_fr.yaml": "eu_ai_act_art5_biometric_profile_fr.yaml",
+    }
+)
 
 
 WORD_NUMBER_MAP: Final = {
@@ -426,6 +434,16 @@ class ContentFilterGuardrail(CustomGuardrail):
                     file_path,
                 )
             return file_path
+
+        normalized_parts: Final = file_path.replace("\\", "/").split("/")
+        if len(normalized_parts) >= 2 and normalized_parts[-2] == "policy_templates":
+            packaged_filename: Final = _LEGACY_POLICY_TEMPLATE_FILENAMES.get(normalized_parts[-1])
+            if packaged_filename is not None:
+                packaged_path: Final = os.path.join(module_dir, "policy_templates", packaged_filename)
+                if os.path.exists(packaged_path):
+                    if not allow_external:
+                        self._assert_within_categories_dir(packaged_path, module_dir)
+                    return packaged_path
 
         # Try the full relative path joined to the module directory
         candidate = os.path.join(module_dir, file_path)

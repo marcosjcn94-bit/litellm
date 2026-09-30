@@ -13,6 +13,38 @@ class TestContentFilterPathTraversal:
 
         return ContentFilterGuardrail.__new__(ContentFilterGuardrail)
 
+    @pytest.mark.parametrize(
+        "legacy_filename,packaged_filename",
+        [
+            (
+                "sg_pdpa_profiling_automated_decisions.yaml",
+                "sg_pdpa_profile_automated_decisions.yaml",
+            ),
+            (
+                "eu_ai_act_art5_emotion_recognition_fr.yaml",
+                "eu_ai_act_art5_emotion_recog_fr.yaml",
+            ),
+            (
+                "eu_ai_act_art5_biometric_profiling_fr.yaml",
+                "eu_ai_act_art5_biometric_profile_fr.yaml",
+            ),
+        ],
+    )
+    def test_resolves_legacy_policy_template_filenames(
+        self, legacy_filename, packaged_filename
+    ):
+        from litellm.proxy.guardrails.guardrail_hooks.litellm_content_filter import (
+            content_filter,
+        )
+
+        module_dir = os.path.dirname(content_filter.__file__)
+        legacy_path = (
+            "litellm/proxy/guardrails/guardrail_hooks/litellm_content_filter/"
+            f"policy_templates/{legacy_filename}"
+        )
+        expected = os.path.join(module_dir, "policy_templates", packaged_filename)
+        assert self._get_guardrail()._resolve_category_file_path(legacy_path) == expected
+
     def test_traversal_via_relative_dotdot_raises(self):
         guardrail = self._get_guardrail()
         with pytest.raises(ValueError, match="outside the allowed categories"):
